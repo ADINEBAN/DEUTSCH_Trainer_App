@@ -32,6 +32,10 @@ export default function VocabScreen() {
   const [saving, setSaving] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Backend seeds ~1000 everyday-communication words under topic 'Giao tiếp'.
+  // Keep that chip visible first even if the server topic list lags behind.
+  const displayTopics = topics.includes('Giao tiếp') ? topics : ['Giao tiếp', ...topics];
+
   const loadPage = useCallback(
     async (pageNum: number, q: string, t: string | null, append: boolean) => {
       if (pageNum === 0) {
@@ -147,7 +151,7 @@ export default function VocabScreen() {
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.topicRow}>
               <Chip label="Tất cả" selected={topic === null} onPress={() => setTopic(null)} />
-              {topics.map((t) => (
+              {displayTopics.map((t) => (
                 <Chip key={t} label={t} selected={topic === t} onPress={() => setTopic(t === topic ? null : t)} />
               ))}
             </ScrollView>

@@ -406,6 +406,28 @@ export async function getTtsFileCacheSize(): Promise<number> {
   }
 }
 
+// Which voice source the app will use for the next speakText() call.
+//   'own'    — the user saved their own Speechify key on this device (Profile)
+//   'server' — the backend Speechify proxy (default)
+//   'device' — only reached when everything else failed (device TTS fallback)
+export type TtsSource = 'own' | 'server' | 'device';
+
+export async function getActiveTtsSource(): Promise<TtsSource> {
+  const key = await getOwnSpeechifyKey();
+  return key ? 'own' : 'server';
+}
+
+export function ttsSourceLabel(source: TtsSource): string {
+  switch (source) {
+    case 'own':
+      return 'giọng API của bạn';
+    case 'server':
+      return 'giọng server';
+    case 'device':
+      return 'giọng dự phòng của máy';
+  }
+}
+
 // One-line human-readable status for the UI.
 export function ttsStatusLabel(status: TtsStatus): string {
   switch (status) {

@@ -116,6 +116,11 @@ export default function HomeScreen() {
           <Text style={styles.rowLabel}>Luyện theo 4 module Goethe</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
         </Pressable>
+        <Pressable style={styles.row} onPress={() => router.push('/communication' as never)}>
+          <Ionicons name="chatbubbles-outline" size={22} color="#0EA5E9" />
+          <Text style={styles.rowLabel}>Mẫu câu giao tiếp hằng ngày</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+        </Pressable>
         <Pressable style={styles.row} onPress={() => router.push('/(tabs)/flashcards')}>
           <Ionicons name="layers-outline" size={22} color={colors.orange} />
           <Text style={styles.rowLabel}>Ôn flashcard hôm nay</Text>

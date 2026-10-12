@@ -12,12 +12,15 @@ import { authService } from '@/src/services/auth.service';
 import { GERMAN_LEVELS } from '@/src/config/modules';
 import {
   clearTtsFileCache,
+  getActiveTtsSource,
   getOwnSpeechifyKey,
   getTtsFileCacheSize,
   removeOwnSpeechifyKey,
   saveOwnSpeechifyKey,
   speakText,
+  ttsSourceLabel,
   ttsStatusLabel,
+  type TtsSource,
   type TtsStatus,
 } from '@/src/services/tts.service';
 import { colors, spacing } from '@/src/theme';
@@ -47,20 +50,23 @@ export default function ProfileScreen() {
   const [hasOwnKey, setHasOwnKey] = useState(false);
   const [keyBusy, setKeyBusy] = useState(false);
   const [ttsStatus, setTtsStatus] = useState<TtsStatus>('idle');
+  const [ttsSource, setTtsSource] = useState<TtsSource>('server');
   const [cacheSize, setCacheSize] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [s, key, size] = await Promise.all([
+      const [s, key, size, source] = await Promise.all([
         authService.dashboard(),
         getOwnSpeechifyKey(),
         getTtsFileCacheSize(),
+        getActiveTtsSource(),
       ]);
       setStats(s);
       setHasOwnKey(!!key);
       setCacheSize(size);
+      setTtsSource(source);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không tải được hồ sơ.');
     } finally {
@@ -87,6 +93,7 @@ export default function ProfileScreen() {
 
   const testVoice = async () => {
     setTtsStatus('creating');
+    setTtsSource(await getActiveTtsSource());
     try {
       await speakText('Hallo! Ich bin dein Deutsch-Coach. Lass uns gemeinsam Deutsch lernen.', {
         onStatus: setTtsStatus,
@@ -106,6 +113,7 @@ export default function ProfileScreen() {
       await saveOwnSpeechifyKey(ownKey);
       setHasOwnKey(true);
       setOwnKey('');
+      setTtsSource(await getActiveTtsSource());
     } finally {
       setKeyBusy(false);
     }
@@ -116,6 +124,7 @@ export default function ProfileScreen() {
     try {
       await removeOwnSpeechifyKey();
       setHasOwnKey(false);
+      setTtsSource(await getActiveTtsSource());
     } finally {
       setKeyBusy(false);
     }
@@ -184,8 +193,15 @@ export default function ProfileScreen() {
         <Text style={styles.voiceNote}>
           Mặc định: giọng tiếng Đức do backend quản lý — bạn không cần nhập gì.
         </Text>
+        <Text style={styles.voiceSource}>
+          Đang dùng: <Text style={styles.voiceSourceValue}>{ttsSourceLabel(ttsSource)}</Text>
+        </Text>
         <GlassButton title="🔊 Nghe thử giọng đọc" variant="outline" onPress={testVoice} style={styles.cta} />
-        {ttsStatus !== 'idle' ? <Text style={styles.voiceStatus}>{ttsStatusLabel(ttsStatus)}</Text> : null}
+        {ttsStatus !== 'idle' ? (
+          <Text style={styles.voiceStatus}>
+            {ttsStatusLabel(ttsStatus)} · {ttsSourceLabel(ttsSource)}
+          </Text>
+        ) : null}
         <Text style={styles.voiceCache}>Bộ nhớ đệm audio trên máy: {formatBytes(cacheSize)}</Text>
         <GlassButton title="Xoá bộ nhớ đệm audio" variant="ghost" onPress={clearCache} />
       </GlassCard>
@@ -251,6 +267,8 @@ const styles = StyleSheet.create({
   achTitle: { fontSize: 15, fontWeight: '800', color: colors.ink },
   achDesc: { fontSize: 13, color: colors.inkSoft, marginTop: 2 },
   voiceNote: { fontSize: 13, color: colors.inkSoft, lineHeight: 19 },
+  voiceSource: { fontSize: 13, color: colors.inkSoft, marginTop: 6 },
+  voiceSourceValue: { fontWeight: '800', color: colors.primary },
   voiceStatus: { fontSize: 13, color: colors.primary, marginTop: 6, fontWeight: '600' },
   voiceCache: { fontSize: 13, color: colors.inkSoft, marginTop: 6 },
   ownKeyTitle: { fontSize: 15, fontWeight: '800', color: colors.ink },
