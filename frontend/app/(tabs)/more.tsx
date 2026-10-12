@@ -42,6 +42,7 @@ export default function MoreScreen() {
   const studyItems: MenuItem[] = [
     { icon: 'bookmark-outline', label: 'Sổ tay', desc: 'Từ đã lưu, câu bookmark, lỗi sai', color: colors.primary, onPress: () => router.push('/notebook' as never) },
     { icon: 'school-outline', label: 'Ngữ pháp', desc: 'Bài học + quiz ngắn', color: colors.teal, onPress: () => router.push('/grammar' as never) },
+    { icon: 'chatbubbles-outline', label: 'Giao tiếp', desc: 'Mẫu câu Đức–Việt theo tình huống', color: '#0EA5E9', onPress: () => router.push('/communication' as never) },
   ];
 
   const accountItems: MenuItem[] = [

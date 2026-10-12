@@ -23,6 +23,7 @@ export default function RootLayout() {
         <Stack.Screen name="admin" />
         <Stack.Screen name="word/[id]" />
         <Stack.Screen name="grammar" />
+        <Stack.Screen name="communication" />
         <Stack.Screen name="practice" />
         <Stack.Screen name="notebook" />
         <Stack.Screen name="profile" />
