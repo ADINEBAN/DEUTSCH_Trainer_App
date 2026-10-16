@@ -203,6 +203,12 @@ public class MockTestService {
         attempts.save(attempt);
 
         statsService.addXp(userId, correctCount * 10 + 20);
+        int testSeconds = switch (s.getKind().toUpperCase()) {
+            case "FULL" -> 3600;
+            case "HALF" -> 1800;
+            default -> 900;
+        };
+        statsService.addStudyTime(userId, testSeconds);
 
         return storedResult(s);
     }

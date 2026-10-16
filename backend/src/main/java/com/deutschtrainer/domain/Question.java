@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -26,6 +29,7 @@ public class Question {
     @Column(nullable = false)
     private String mode = "practice"; // practice|placement|mock
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "question_json", nullable = false, columnDefinition = "jsonb")
     private String questionJson;
 

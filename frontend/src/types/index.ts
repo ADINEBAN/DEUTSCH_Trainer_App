@@ -14,6 +14,7 @@ export interface User {
   name: string;
   role: Role;
   targetLevel?: GermanLevel | null;
+  avatar?: string | null;
 }
 
 export interface AuthResponse {

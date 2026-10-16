@@ -37,9 +37,14 @@ function normalizeBaseUrl(raw: string) {
 
 const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
 
-export const API_BASE_URL = normalizeBaseUrl(
-  configured && configured.length > 0 ? configured : getDefaultBaseUrl()
-);
+function resolveBaseUrl() {
+  if (configured && !configured.includes('localhost')) {
+    return configured;
+  }
+  return Platform.OS === 'web' ? 'http://localhost:8080' : 'http://192.168.1.10:8080';
+}
+
+export const API_BASE_URL = normalizeBaseUrl(resolveBaseUrl());
 
 // The backend serves audio bytes from this path: GET /api/tts?text=...
 // (optional &voice=...). The default German voice is decided by the backend

@@ -22,14 +22,14 @@ export function Screen({ children, scroll = true, padded = true }: ScreenProps) 
     <AuroraBackground>
       {scroll ? (
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing.xl }]}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 88 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           {inner}
         </ScrollView>
       ) : (
-        <View style={[styles.fill, { paddingBottom: insets.bottom }]}>{inner}</View>
+        <View style={[styles.fill, { paddingBottom: insets.bottom + 80 }]}>{inner}</View>
       )}
     </AuroraBackground>
   );

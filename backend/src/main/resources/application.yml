@@ -36,7 +36,7 @@ app:
   cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
   speechify:
     api-key: ${SPEECHIFY_API_KEY:}
-    api-url: https://api.speechify.com/v1/audio/speech
+    api-url: ${SPEECHIFY_API_URL:https://api.speechify.ai/v1/audio/speech}
     model: ${SPEECHIFY_MODEL:simba-3.0}
     # Default German voice. simba-3.0 is required for non-English voices
     # (simba-3.2 is English-only and rejects German voices with 400).

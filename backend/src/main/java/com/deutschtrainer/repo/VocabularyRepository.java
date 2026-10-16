@@ -13,9 +13,11 @@ import java.util.UUID;
 
 public interface VocabularyRepository extends JpaRepository<Vocabulary, UUID> {
     @Query("SELECT v FROM Vocabulary v WHERE (:topic IS NULL OR v.topic = :topic) "
-            + "AND (:q IS NULL OR LOWER(v.word) LIKE LOWER(CONCAT('%', :q, '%')) "
-            + "OR LOWER(v.meaningVi) LIKE LOWER(CONCAT('%', :q, '%')))")
+            + "AND (:q IS NULL OR LOWER(v.word) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) "
+            + "OR LOWER(v.meaningVi) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))")
     Page<Vocabulary> search(@Param("topic") String topic, @Param("q") String q, Pageable pageable);
+
+    Page<Vocabulary> findByTopic(String topic, Pageable pageable);
 
     List<Vocabulary> findByTopic(String topic);
 

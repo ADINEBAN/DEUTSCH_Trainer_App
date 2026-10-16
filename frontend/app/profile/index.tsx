@@ -23,7 +23,16 @@ import {
   type TtsSource,
   type TtsStatus,
 } from '@/src/services/tts.service';
-import { colors, spacing } from '@/src/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { LevelAvatar } from '@/src/components/ui/LevelAvatar';
+import { EditProfileModal } from '@/src/components/profile/EditProfileModal';
+import {
+  getTierForLevel,
+  getUserAvatar,
+  getUserFrame,
+  type MythicFrameType,
+} from '@/src/utils/levelTiers';
+import { colors, radius, spacing } from '@/src/theme';
 import type { DashboardStats, GermanLevel } from '@/src/types';
 
 function formatBytes(bytes: number) {
@@ -52,6 +61,9 @@ export default function ProfileScreen() {
   const [ttsStatus, setTtsStatus] = useState<TtsStatus>('idle');
   const [ttsSource, setTtsSource] = useState<TtsSource>('server');
   const [cacheSize, setCacheSize] = useState(0);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [userAvatar, setUserAvatar] = useState('wolf_ice');
+  const [userFrame, setUserFrame] = useState<MythicFrameType>('auto');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +90,24 @@ export default function ProfileScreen() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (user?.id) {
+      getUserAvatar(user.id).then(setUserAvatar);
+      getUserFrame(user.id).then(setUserFrame);
+    }
+  }, [user?.id]);
+
+  const handleProfileUpdated = useCallback(async () => {
+    await refreshUser();
+    await load();
+    if (user?.id) {
+      const av = await getUserAvatar(user.id);
+      const fr = await getUserFrame(user.id);
+      setUserAvatar(av);
+      setUserFrame(fr);
+    }
+  }, [refreshUser, load, user?.id]);
+
   const saveTarget = async () => {
     setSavingTarget(true);
     try {
@@ -100,7 +130,6 @@ export default function ProfileScreen() {
         onDone: () => setTtsStatus('idle'),
         onError: () => setTtsStatus('idle'),
       });
-      setTtsStatus('idle');
     } catch {
       setTtsStatus('idle');
     }
@@ -110,10 +139,12 @@ export default function ProfileScreen() {
     if (!ownKey.trim()) return;
     setKeyBusy(true);
     try {
-      await saveOwnSpeechifyKey(ownKey);
+      await saveOwnSpeechifyKey(ownKey.trim());
       setHasOwnKey(true);
       setOwnKey('');
       setTtsSource(await getActiveTtsSource());
+      await clearTtsFileCache();
+      setCacheSize(0);
     } finally {
       setKeyBusy(false);
     }
@@ -125,6 +156,8 @@ export default function ProfileScreen() {
       await removeOwnSpeechifyKey();
       setHasOwnKey(false);
       setTtsSource(await getActiveTtsSource());
+      await clearTtsFileCache();
+      setCacheSize(0);
     } finally {
       setKeyBusy(false);
     }
@@ -144,20 +177,42 @@ export default function ProfileScreen() {
       ]
     : [];
 
+  const tier = getTierForLevel(stats?.level ?? 1);
+
   return (
     <Screen>
       <Text style={styles.title}>Hồ sơ</Text>
 
-      <GlassCard>
-        <Text style={styles.name}>{user?.name}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        <Text style={styles.target}>
-          Mục tiêu: <Text style={styles.targetValue}>{user?.targetLevel ?? '—'}</Text>
-        </Text>
-        <GlassButton title="Đổi trình độ mục tiêu" variant="outline" onPress={() => {
-          setTargetLevel(user?.targetLevel ?? 'B1');
-          setTargetModal(true);
-        }} style={styles.cta} />
+      <GlassCard borderRadius={28}>
+        <View style={styles.profileUserRow}>
+          <LevelAvatar
+            level={stats?.level ?? 1}
+            avatar={userAvatar}
+            frameType={userFrame}
+            size={72}
+            showWings
+            showBadge
+          />
+          <View style={styles.profileUserInfo}>
+            <Text style={styles.name}>{user?.name || 'Học viên Deutsch'}</Text>
+            <Text style={styles.email}>{user?.email}</Text>
+            <View style={styles.tierTagRow}>
+              <View style={[styles.tierTag, { backgroundColor: `${tier.primaryColor}18`, borderColor: `${tier.primaryColor}55` }]}>
+                <Ionicons name={tier.elementIcon} size={12} color={tier.primaryColor} />
+                <Text style={[styles.tierTagText, { color: tier.primaryColor }]}>{tier.name} • Cấp {stats?.level ?? 1}</Text>
+              </View>
+            </View>
+            <Text style={styles.target}>
+              Mục tiêu: <Text style={styles.targetValue}>{user?.targetLevel ?? '—'}</Text>
+            </Text>
+          </View>
+        </View>
+        <GlassButton
+          title="Chỉnh sửa thông tin hồ sơ"
+          icon="create-outline"
+          onPress={() => setEditModalVisible(true)}
+          style={styles.cta}
+        />
       </GlassCard>
 
       {loading ? (
@@ -249,12 +304,47 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+      <EditProfileModal
+        visible={editModalVisible}
+        user={user}
+        level={stats?.level ?? 1}
+        onClose={() => setEditModalVisible(false)}
+        onSuccess={handleProfileUpdated}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: colors.ink, marginTop: spacing.sm },
+  profileUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: spacing.xs,
+  },
+  profileUserInfo: {
+    flex: 1,
+  },
+  tierTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  tierTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+  },
+  tierTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
   name: { fontSize: 20, fontWeight: '800', color: colors.ink },
   email: { fontSize: 14, color: colors.inkSoft, marginTop: 2 },
   target: { fontSize: 15, color: colors.ink, marginTop: spacing.sm },

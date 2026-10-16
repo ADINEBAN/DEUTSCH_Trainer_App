@@ -10,6 +10,7 @@ import com.deutschtrainer.repo.VocabularyRepository;
 import com.deutschtrainer.repo.WordProgressRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,20 +28,32 @@ public class VocabService {
     private final CustomWordRepository customWords;
     private final WordProgressRepository progress;
     private final SrsService srs;
+    private final StatsService statsService;
 
     public VocabService(VocabularyRepository vocabulary,
                         CustomWordRepository customWords,
                         WordProgressRepository progress,
-                        SrsService srs) {
+                        SrsService srs,
+                        StatsService statsService) {
         this.vocabulary = vocabulary;
         this.customWords = customWords;
         this.progress = progress;
         this.srs = srs;
+        this.statsService = statsService;
     }
 
     @Transactional(readOnly = true)
     public Page<Map<String, Object>> searchVocab(String topic, String q, int page, int size) {
-        return vocabulary.search(blankToNull(topic), blankToNull(q), PageRequest.of(page, Math.min(size, 100)))
+        String t = blankToNull(topic);
+        String query = blankToNull(q);
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100));
+        if (query == null) {
+            if (t == null) {
+                return vocabulary.findAll(pageable).map(this::toVocabMap);
+            }
+            return vocabulary.findByTopic(t, pageable).map(this::toVocabMap);
+        }
+        return vocabulary.search(t, query, pageable)
                 .map(this::toVocabMap);
     }
 
@@ -124,9 +137,17 @@ public class VocabService {
             case "easy" -> 3;
             default -> throw ApiException.badRequest("rating phải là again|hard|good|easy.");
         };
+        int xpEarned = switch (selfRating) {
+            case 3 -> 10;
+            case 2 -> 6;
+            case 1 -> 3;
+            default -> 1;
+        };
+        statsService.addXp(userId, xpEarned);
+        statsService.addStudyTime(userId, 30);
         Map<String, Object> result = upsertProgress(
                 userId, new WordProgressRequest(wordId, customWordId, null, null, selfRating));
-        return Map.of("nextReviewAt", result.get("nextReviewAt"));
+        return Map.of("nextReviewAt", result.get("nextReviewAt"), "xpEarned", xpEarned);
     }
 
     /** Resolves a progress row to the app-facing word shape (system or custom word). */

@@ -5,12 +5,22 @@
         "backgroundColor": "#E9F2FB"
       },
       "package": "com.adineban.deutschtrainer",
+      "edgeToEdgeEnabled": true,
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
         "READ_EXTERNAL_STORAGE"
       ],
       "predictiveBackGestureEnabled": false
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#00000000",
+      "barStyle": "dark-content",
+      "translucent": true
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#00000000",
+      "barStyle": "dark-content"
     },
     "experiments": {
       "typedRoutes": true
@@ -32,7 +42,15 @@
           "photosPermission": "Cho phép Deutsch Trainer truy cập ảnh để học từ qua ảnh chụp."
         }
       ],
-      "expo-document-picker"
+      "expo-document-picker",
+      [
+        "expo-navigation-bar",
+        {
+          "position": "absolute",
+          "backgroundColor": "#00000000",
+          "barStyle": "dark-content"
+        }
+      ]
     ],
     "scheme": "deutschtrainer",
     "slug": "deutsch-trainer-app",

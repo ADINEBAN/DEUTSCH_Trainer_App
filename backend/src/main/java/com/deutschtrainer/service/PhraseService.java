@@ -5,6 +5,7 @@ import com.deutschtrainer.dto.SituationCount;
 import com.deutschtrainer.repo.PhraseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,8 +25,13 @@ public class PhraseService {
 
     @Transactional(readOnly = true)
     public Page<Map<String, Object>> searchPhrases(String situation, String q, int page, int size) {
-        return phrases.search(blankToNull(situation), blankToNull(q),
-                        PageRequest.of(page, Math.min(size, 100), Sort.by("id")))
+        String s = blankToNull(situation);
+        String query = blankToNull(q);
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by("id"));
+        if (s == null && query == null) {
+            return phrases.findAll(pageable).map(this::toPhraseMap);
+        }
+        return phrases.search(s, query, pageable)
                 .map(this::toPhraseMap);
     }
 

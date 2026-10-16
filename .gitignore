@@ -52,3 +52,4 @@ uploads/
 *.db
 *.sqlite
 package-lock.json
+tools/

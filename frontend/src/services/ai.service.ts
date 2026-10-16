@@ -6,6 +6,7 @@ import type {
   HandsfreeSession,
   PhotoWordResult,
   SemanticGraph,
+  SemanticRelation,
   SpeakingAttempt,
   SpeakingResult,
   SpeakingSample,
@@ -17,8 +18,33 @@ export const aiService = {
   },
 
   // --- 6.1 Semantic word network (cached in word_relations by the backend) ---
-  semanticGraph(word: string) {
-    return apiRequest<SemanticGraph>(`/api/ai/semantic?word=${encodeURIComponent(word)}`);
+  async semanticGraph(word: string): Promise<SemanticGraph> {
+    const raw = await apiRequest<any>(`/api/ai/semantic?word=${encodeURIComponent(word)}`);
+    const center = raw.center || {
+      id: raw.word || word,
+      word: raw.word || word,
+      meaningVi: raw.meaningVi || '',
+      ipa: raw.ipa || '',
+      topic: raw.topic || 'Allgemein',
+    };
+    const relations: SemanticRelation[] = (raw.relations || []).map((r: any) => {
+      let rel: SemanticRelation['relation'] = 'wordFamily';
+      const rawRel = (r.relation || r.relationType || '').toLowerCase();
+      if (rawRel.includes('synonym')) rel = 'synonym';
+      else if (rawRel.includes('antonym')) rel = 'antonym';
+      else if (rawRel.includes('collocation')) rel = 'collocation';
+      else rel = 'wordFamily';
+      return {
+        word: r.word,
+        wordId: r.wordId || r.relatedWordId,
+        relation: rel,
+        example: r.example || r.exampleDe || r.exampleEn || null,
+      };
+    });
+    return {
+      center,
+      relations,
+    };
   },
 
   saveSemanticWord(word: string) {

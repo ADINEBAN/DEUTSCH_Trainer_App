@@ -69,6 +69,7 @@ public class SpeakingService {
         }
         attempts.save(attempt);
         statsService.addXp(userId, 10);
+        statsService.addStudyTime(userId, 60);
 
         Map<String, Object> out = new LinkedHashMap<>(result);
         out.put("attemptId", attempt.getId().toString());

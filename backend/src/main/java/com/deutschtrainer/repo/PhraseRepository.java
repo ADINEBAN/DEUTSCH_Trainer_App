@@ -14,11 +14,13 @@ import java.util.UUID;
 public interface PhraseRepository extends JpaRepository<Phrase, UUID> {
 
     @Query("SELECT p FROM Phrase p WHERE (:situation IS NULL OR p.situation = :situation) "
-            + "AND (:q IS NULL OR LOWER(p.german) LIKE LOWER(CONCAT('%', :q, '%')) "
-            + "OR LOWER(p.vietnamese) LIKE LOWER(CONCAT('%', :q, '%')))")
+            + "AND (:q IS NULL OR LOWER(p.german) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')) "
+            + "OR LOWER(p.vietnamese) LIKE LOWER(CONCAT('%', CAST(:q AS string), '%')))")
     Page<Phrase> search(@Param("situation") String situation,
                        @Param("q") String q,
                        Pageable pageable);
+
+    Page<Phrase> findBySituation(String situation, Pageable pageable);
 
     @Query("SELECT new com.deutschtrainer.dto.SituationCount(p.situation, COUNT(p)) "
             + "FROM Phrase p GROUP BY p.situation ORDER BY p.situation")

@@ -11,8 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +39,7 @@ public class TtsService {
     private final String apiUrl;
     private final String model;
     private final String defaultVoice;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public TtsService(TtsCacheRepository cache,
                       RestClient restClient,
@@ -98,22 +103,34 @@ public class TtsService {
                 "audio_format", "mp3",
                 "model", model);
         try {
-            byte[] audio = restClient.post()
+            byte[] responseBytes = restClient.post()
                     .uri(apiUrl)
                     .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
                     .body(byte[].class);
-            if (audio == null || audio.length == 0) {
+            if (responseBytes == null || responseBytes.length == 0) {
                 throw ApiException.serviceUnavailable(
                         "Speechify trả về âm thanh trống. Vui lòng thử lại sau.");
             }
-            return audio;
+            // Speechify returns JSON: {"audio_data": "<base64>"}
+            if (responseBytes[0] == '{') {
+                JsonNode root = objectMapper.readTree(responseBytes);
+                if (root.hasNonNull("audio_data")) {
+                    String base64 = root.get("audio_data").asText();
+                    return Base64.getDecoder().decode(base64.trim());
+                }
+                if (root.hasNonNull("error")) {
+                    log.error("Speechify error response: {}", root.get("error"));
+                    throw ApiException.serviceUnavailable("Speechify lỗi: " + root.get("error"));
+                }
+            }
+            return responseBytes;
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Speechify call failed", e);
+            log.error("Speechify call failed: {}", e.getMessage(), e);
             throw ApiException.serviceUnavailable(
                     "Không tạo được giọng đọc lúc này. Vui lòng dùng giọng đọc của thiết bị.");
         }

@@ -36,13 +36,12 @@ public class PhotoWord {
     @Column(name = "example_en", columnDefinition = "TEXT")
     private String exampleEn;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-
     /** German noun article (der|die|das); null for non-nouns. Added in V5. */
     private String article;
 
     /** German noun plural form; null for non-nouns. Added in V5. */
     private String plural;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

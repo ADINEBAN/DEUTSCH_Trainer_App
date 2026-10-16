@@ -1,14 +1,44 @@
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { ReactNode } from 'react';
-import { colors } from '@/src/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// Light glass "aurora" backdrop: sky base + layered translucent blobs.
+// Luminous Studio Backdrop with seamless diffuse aurora gradients:
+// Creates a clean, ethereal, transparent liquid glass look with zero hard circular edges.
 export function AuroraBackground({ children }: { children: ReactNode }) {
   return (
     <View style={styles.root}>
-      <View style={[styles.blob, styles.blobA]} />
-      <View style={[styles.blob, styles.blobB]} />
-      <View style={[styles.blob, styles.blobC]} />
+      {/* 1. Base Crystal Sky Background */}
+      <LinearGradient
+        colors={['#EBF3FA', '#F2F7FC', '#E5F0FA']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* 2. Soft Ambient Pastel Aurora (Seamless diffuse light caustics) */}
+      <LinearGradient
+        colors={[
+          'rgba(125, 211, 252, 0.30)', // Sky Cyan
+          'transparent',
+          'rgba(254, 215, 170, 0.24)', // Warm Champagne
+          'rgba(167, 243, 208, 0.22)', // Mint Dew
+          'rgba(221, 214, 254, 0.22)', // Lavender
+        ]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* 3. Subtle Counter-Refraction Flare */}
+      <LinearGradient
+        colors={['transparent', 'rgba(255, 255, 255, 0.40)', 'transparent']}
+        start={{ x: 0, y: 0.4 }}
+        end={{ x: 1, y: 0.7 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Content */}
       <View style={styles.content}>{children}</View>
     </View>
   );
@@ -17,35 +47,8 @@ export function AuroraBackground({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.sky,
-  },
-  blob: {
-    position: 'absolute',
-    borderRadius: 999,
-    opacity: 0.55,
-  },
-  blobA: {
-    width: 320,
-    height: 320,
-    top: -90,
-    right: -80,
-    backgroundColor: '#BFDDFB',
-  },
-  blobB: {
-    width: 260,
-    height: 260,
-    top: 240,
-    left: -90,
-    backgroundColor: '#C9F2EC',
-    opacity: 0.5,
-  },
-  blobC: {
-    width: 220,
-    height: 220,
-    bottom: -60,
-    right: 40,
-    backgroundColor: '#D9E8FF',
-    opacity: 0.6,
+    position: 'relative',
+    backgroundColor: '#EBF3FA',
   },
   content: {
     flex: 1,

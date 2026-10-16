@@ -108,7 +108,16 @@ public class AdminService {
     // ---------------- Vocabulary CRUD ----------------
     @Transactional(readOnly = true)
     public Page<Map<String, Object>> listVocabulary(String topic, String q, int page, int size) {
-        return vocabulary.search(blankToNull(topic), blankToNull(q), PageRequest.of(page, Math.min(size, 100)))
+        String t = blankToNull(topic);
+        String query = blankToNull(q);
+        org.springframework.data.domain.Pageable pageable = PageRequest.of(page, Math.min(size, 100));
+        if (query == null) {
+            if (t == null) {
+                return vocabulary.findAll(pageable).map(this::toVocabMap);
+            }
+            return vocabulary.findByTopic(t, pageable).map(this::toVocabMap);
+        }
+        return vocabulary.search(t, query, pageable)
                 .map(this::toVocabMap);
     }
 

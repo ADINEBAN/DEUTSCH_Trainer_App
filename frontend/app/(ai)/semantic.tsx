@@ -42,7 +42,7 @@ export default function SemanticScreen() {
     try {
       const g = await aiService.semanticGraph(w);
       setGraph(g);
-      setQuery(g.center.word);
+      setQuery(g?.center?.word ?? w);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không tải được mạng từ.');
     } finally {

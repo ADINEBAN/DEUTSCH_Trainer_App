@@ -20,7 +20,7 @@ import { Platform } from 'react-native';
 import { aiService } from '@/src/services/ai.service';
 import { getOwnSpeechifyKey, setOwnSpeechifyKey } from '@/src/services/storage';
 
-export const SPEECHIFY_MODEL = 'simba-3.2';
+export const SPEECHIFY_MODEL = 'simba-3.0';
 export const SPEECHIFY_VOICE_NAME = 'Giọng đọc tiếng Đức';
 const DIRECT_SPEECHIFY_URL = 'https://api.speechify.ai/v1/audio/speech';
 const CACHE_DIR = 'deutsch-tts-cache';
@@ -100,7 +100,7 @@ function normalizeText(text: string) {
 }
 
 function cacheKeyFor(text: string, voice: string | undefined) {
-  return sha256Hex(`${SPEECHIFY_MODEL}|${voice ?? 'backend-default'}|${normalizeText(text)}`);
+  return sha256Hex(`v3|${SPEECHIFY_MODEL}|${voice ?? 'backend-default'}|${normalizeText(text)}`);
 }
 
 function getCacheDir(): FileSystem.Directory {
@@ -128,7 +128,7 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
-// Bytes -> base64 for the new expo-file-system File.write(string) path.
+// Bytes -> base64 for data URI on Web
 function bytesToBase64(bytes: Uint8Array): string {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   let out = '';
@@ -159,8 +159,8 @@ async function fetchWithOwnKey(text: string, voice: string | undefined, apiKey: 
       audio_format: 'mp3',
       input: normalizeText(text),
       model: SPEECHIFY_MODEL,
-      // voice_id omitted unless the user chose one — Speechify then uses its default.
-      ...(voice ? { voice_id: voice } : {}),
+      // voice_id defaults to amalia (German) for simba-3.0
+      voice_id: voice || 'amalia',
     }),
   });
   const payload = (await response.json().catch(() => null)) as DirectSpeechifyPayload | null;
@@ -168,6 +168,16 @@ async function fetchWithOwnKey(text: string, voice: string | undefined, apiKey: 
     throw new Error(payload?.message || payload?.error || `Speechify trả về lỗi ${response.status}.`);
   }
   return base64ToBytes(payload.audio_data);
+}
+
+let serverTtsAvailable: boolean | null = null;
+
+export function setServerTtsAvailable(available: boolean | null): void {
+  serverTtsAvailable = available;
+}
+
+export function isServerTtsAvailable(): boolean | null {
+  return serverTtsAvailable;
 }
 
 async function getOrCreateAudioFile(
@@ -199,11 +209,28 @@ async function getOrCreateAudioFile(
       }
     }
 
-    status('creating');
-    // Default path: backend proxy (backend owns the key, serves its cache).
-    // Optional on-device path: user's own key, entered in Profile.
     const ownKey = await getOwnSpeechifyKey();
-    const bytes = ownKey ? await fetchWithOwnKey(text, voice, ownKey) : await fetchFromBackend(text, voice);
+    if (!ownKey && serverTtsAvailable === false) {
+      throw new Error('SERVER_TTS_UNAVAILABLE');
+    }
+
+    status('creating');
+    let bytes: Uint8Array;
+    if (ownKey) {
+      bytes = await fetchWithOwnKey(text, voice, ownKey);
+    } else {
+      // Race backend fetch with a fast 1500ms timeout
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('TTS timeout')), 1500)
+      );
+      try {
+        bytes = await Promise.race([fetchFromBackend(text, voice), timeoutPromise]);
+        serverTtsAvailable = true;
+      } catch (err) {
+        serverTtsAvailable = false;
+        throw err;
+      }
+    }
 
     if (Platform.OS === 'web') {
       const dataUri = `data:audio/mpeg;base64,${bytesToBase64(bytes)}`;
@@ -215,7 +242,8 @@ async function getOrCreateAudioFile(
     const dir = getCacheDir();
     const file = new FileSystem.File(dir, `de-${key}.mp3`);
     file.create({ overwrite: true });
-    file.write(bytesToBase64(bytes));
+    // Write Uint8Array directly to store valid binary MP3 (not raw base64 text)
+    file.write(bytes);
     memoryCache.set(key, file.uri);
     status('playing-george');
     return file.uri;
@@ -342,8 +370,6 @@ async function speakWithDeviceVoice(text: string, options: SpeakOptions): Promis
 export async function speakText(rawText: string, options: SpeakOptions = {}): Promise<TtsStatus> {
   const text = normalizeText(rawText);
   if (!text) return 'idle';
-  // When the user hasn't chosen a voice, `voice` stays undefined so the
-  // backend picks its default German voice.
   const voice = options.voice;
   const report = (s: TtsStatus) => options.onStatus?.(s);
 
@@ -352,15 +378,23 @@ export async function speakText(rawText: string, options: SpeakOptions = {}): Pr
   await Speech.stop().catch(() => undefined);
   await setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
 
+  // Instant fast-path: if server TTS is not available and user has no own key,
+  // play on-device German voice immediately with 0 network latency!
+  const ownKey = await getOwnSpeechifyKey();
+  if (!ownKey && serverTtsAvailable === false) {
+    await speakWithDeviceVoice(text, options);
+    return 'fallback';
+  }
+
   try {
     const uri = await getOrCreateAudioFile(text, voice, report);
     await playUri(uri, options);
     return 'playing-george';
   } catch (error) {
-    const err = error instanceof Error ? error : new Error('Không phát được giọng đọc.');
-    options.onError?.(err);
     if (options.disableFallback) {
       report('error');
+      const err = error instanceof Error ? error : new Error('Không phát được giọng đọc.');
+      options.onError?.(err);
       throw err;
     }
     await speakWithDeviceVoice(text, options);

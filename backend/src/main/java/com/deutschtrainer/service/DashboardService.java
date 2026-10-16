@@ -5,15 +5,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.deutschtrainer.common.ApiException;
 import com.deutschtrainer.domain.PlacementResult;
 import com.deutschtrainer.domain.PracticeAttempt;
+import com.deutschtrainer.domain.SpeakingAttempt;
 import com.deutschtrainer.domain.User;
 import com.deutschtrainer.domain.UserStats;
+import com.deutschtrainer.domain.WordProgress;
 import com.deutschtrainer.repo.PlacementResultRepository;
 import com.deutschtrainer.repo.PracticeAttemptRepository;
+import com.deutschtrainer.repo.SpeakingAttemptRepository;
 import com.deutschtrainer.repo.UserRepository;
 import com.deutschtrainer.repo.UserStatsRepository;
+import com.deutschtrainer.repo.WordProgressRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,17 +34,23 @@ public class DashboardService {
     private final UserStatsRepository stats;
     private final PlacementResultRepository placements;
     private final PracticeAttemptRepository attempts;
+    private final WordProgressRepository wordProgress;
+    private final SpeakingAttemptRepository speakingAttempts;
     private final ObjectMapper objectMapper;
 
     public DashboardService(UserRepository users,
                             UserStatsRepository stats,
                             PlacementResultRepository placements,
                             PracticeAttemptRepository attempts,
+                            WordProgressRepository wordProgress,
+                            SpeakingAttemptRepository speakingAttempts,
                             ObjectMapper objectMapper) {
         this.users = users;
         this.stats = stats;
         this.placements = placements;
         this.attempts = attempts;
+        this.wordProgress = wordProgress;
+        this.speakingAttempts = speakingAttempts;
         this.objectMapper = objectMapper;
     }
 
@@ -83,11 +96,61 @@ public class DashboardService {
         out.put("streakDays", s.getStreak());
         out.put("xp", s.getXp());
         out.put("level", s.getLevel());
-        // Daily study minutes are not tracked per-day yet — report honestly.
-        out.put("dailyDoneMinutes", 0);
+        out.put("dailyDoneMinutes", calculateDailyDoneMinutes(userId, s));
         out.put("dailyGoalMinutes", s.getDailyGoalMinutes());
         out.put("nextMilestone", milestone);
         return out;
+    }
+
+    /**
+     * Accurately calculates study minutes completed today (since 00:00:00 local time).
+     * Accounts for practice attempts, flashcard SRS reviews, and speaking sessions.
+     */
+    private int calculateDailyDoneMinutes(UUID userId, UserStats s) {
+        ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+        Instant startOfDay = LocalDate.now(zone).atStartOfDay(zone).toInstant();
+
+        int totalMinutes = 0;
+
+        // 1. Practice attempts completed today
+        List<PracticeAttempt> todayAttempts = attempts.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .filter(a -> a.getCreatedAt() != null && a.getCreatedAt().isAfter(startOfDay))
+                .toList();
+
+        for (PracticeAttempt a : todayAttempts) {
+            String mode = a.getMode() == null ? "practice" : a.getMode().toLowerCase();
+            switch (mode) {
+                case "full" -> totalMinutes += 60;
+                case "half" -> totalMinutes += 30;
+                case "mini" -> totalMinutes += 15;
+                case "handsfree" -> totalMinutes += Math.max(3, a.getTotal());
+                default -> {
+                    // Standard practice: ~1 minute per question, minimum 2 minutes per session
+                    totalMinutes += Math.max(2, a.getTotal());
+                }
+            }
+        }
+
+        // 2. Flashcard / vocabulary reviews done today
+        if (wordProgress != null) {
+            long cardsToday = wordProgress.findByUserId(userId).stream()
+                    .filter(p -> p.getLastReviewAt() != null && p.getLastReviewAt().isAfter(startOfDay))
+                    .count();
+            // Average ~30s per flashcard -> 2 cards = 1 minute
+            totalMinutes += (int) Math.ceil(cardsToday / 2.0);
+        }
+
+        // 3. Speaking attempts done today
+        if (speakingAttempts != null) {
+            long speakingToday = speakingAttempts.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                    .filter(a -> a.getCreatedAt() != null && a.getCreatedAt().isAfter(startOfDay))
+                    .count();
+            // Average ~1 minute per speaking recording
+            totalMinutes += (int) speakingToday;
+        }
+
+        return totalMinutes;
     }
 
     /**

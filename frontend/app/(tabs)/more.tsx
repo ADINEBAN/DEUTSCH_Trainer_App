@@ -33,10 +33,8 @@ export default function MoreScreen() {
 
   const aiItems: MenuItem[] = [
     { icon: 'share-social-outline', label: 'Mạng ngữ nghĩa', desc: 'Học từ theo cụm liên quan', color: colors.primary, onPress: () => router.push('/(ai)/semantic' as never) },
-    { icon: 'camera-outline', label: 'Chụp ảnh học từ', desc: 'Nhận diện vật thể → tên tiếng Đức', color: colors.teal, onPress: () => router.push('/(ai)/camera' as never) },
     { icon: 'document-text-outline', label: 'Nạp tài liệu', desc: 'PDF/Word/TXT → đề + từ vựng', color: '#8B5CF6', onPress: () => router.push('/(ai)/docs' as never) },
     { icon: 'mic-outline', label: 'Speaking Coach', desc: 'Chấm phát âm 4 thành phần', color: colors.orange, onPress: () => router.push('/(ai)/speaking' as never) },
-    { icon: 'headset-outline', label: 'Học rảnh tay', desc: 'Ôn bằng giọng nói', color: '#EC4899', onPress: () => router.push('/(ai)/handsfree' as never) },
   ];
 
   const studyItems: MenuItem[] = [
@@ -54,14 +52,18 @@ export default function MoreScreen() {
   const renderGroup = (title: string, items: MenuItem[]) => (
     <View>
       <SectionTitle title={title} />
-      <GlassCard>
+      <GlassCard borderRadius={26}>
         {items.map((item, i) => (
           <Pressable
             key={item.label}
-            style={[styles.row, i < items.length - 1 && styles.rowBorder]}
+            style={({ pressed }) => [
+              styles.row,
+              i < items.length - 1 && styles.rowBorder,
+              pressed && styles.rowPressed,
+            ]}
             onPress={item.onPress}
           >
-            <View style={[styles.iconWrap, { backgroundColor: `${item.color}1A` }]}>
+            <View style={[styles.iconWrap, { backgroundColor: `${item.color}18` }]}>
               <Ionicons name={item.icon} size={20} color={item.color} />
             </View>
             <View style={styles.rowMain}>
@@ -87,10 +89,29 @@ export default function MoreScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: '800', color: colors.ink, marginTop: spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.line },
-  iconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 26, fontWeight: '900', color: colors.ink, marginTop: spacing.sm, letterSpacing: -0.5 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  rowPressed: {
+    opacity: 0.7,
+  },
+  rowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(16, 42, 67, 0.06)',
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+  },
   rowMain: { flex: 1 },
   rowLabel: { fontSize: 15, fontWeight: '700', color: colors.ink },
   rowDesc: { fontSize: 12, color: colors.inkMuted, marginTop: 2 },

@@ -101,6 +101,7 @@ public class PracticeService {
 
         // XP: 10 per correct answer, +5 participation bonus
         statsService.addXp(userId, score * 10 + 5);
+        statsService.addStudyTime(userId, Math.max(120, answers.size() * 60));
 
         List<Map<String, Object>> mistakes = new ArrayList<>();
         for (int i = 0; i < detail.size(); i++) {

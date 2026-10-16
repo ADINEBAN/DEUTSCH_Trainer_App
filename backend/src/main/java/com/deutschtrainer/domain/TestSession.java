@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -29,9 +32,11 @@ public class TestSession {
     @Column(nullable = false)
     private String kind = "MINI"; // MINI|HALF|FULL
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "question_ids", nullable = false, columnDefinition = "jsonb")
     private String questionIds = "[]";
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
     private String answers = "[]";
 

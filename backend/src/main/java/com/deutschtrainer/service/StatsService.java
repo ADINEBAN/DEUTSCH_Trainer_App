@@ -50,7 +50,7 @@ public class StatsService {
         }
         UserStats s = getOrCreate(userId);
         s.setXp(s.getXp() + xp);
-        s.setLevel(1 + s.getXp() / 1000);
+        s.setLevel(1 + s.getXp() / 250);
         updateStreak(s);
         stats.save(s);
     }
